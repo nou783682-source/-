@@ -8,15 +8,70 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    container:
-      image: barichello/godot-ci:4.2.2
+
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
 
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Godot 4.2.2 and export templates
+        run: |
+          set -e
+          GODOT_VERSION="4.2.2"
+          GODOT_STATUS="stable"
+          GODOT_FOLDER="${GODOT_VERSION}.${GODOT_STATUS}"
+
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64.zip" -O godot.zip
+          unzip -q godot.zip
+          chmod +x Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64
+          sudo mv Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64 /usr/local/bin/godot
+
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz" -O templates.tpz
+          unzip -q templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_FOLDER}"
+          cp -r templates/* "$HOME/.local/share/godot/export_templates/${GODOT_FOLDER}/"
+
+      - name: Configure Android export settings
+        run: |
+          set -e
+          mkdir -p "$HOME/.config/godot"
+          mkdir -p "$HOME/.android"
+          mkdir -p build
+
+          JAVA_PATH=$(dirname $(dirname $(readlink -f $(which javac))))
+          SDK_PATH=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}
+
+          keytool -genkeypair \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" || true
+
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOFSETTINGS
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$SDK_PATH"
+          export/android/java_sdk_path = "$JAVA_PATH"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOFSETTINGS
+
       - name: Build debug APK
         run: |
-          mkdir -p build
           godot --headless --verbose --export-debug "Android" build/SobrJumper.apk
 
       - name: Upload APK
