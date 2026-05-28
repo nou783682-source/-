@@ -8,6 +8,9 @@ on:
       - master
       - основной
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -134,13 +137,24 @@ EOF
         run: |
           mkdir -p build
           godot --headless --export-debug "Android" build/SobrJumper.apk
-          ls -lah build
-          find . -name "*.apk" -type f
+          test -f build/SobrJumper.apk
+          ls -lah build/SobrJumper.apk
 
-      - name: UPLOAD APK TO DOWNLOAD
+      - name: Save APK into repository
+        run: |
+          mkdir -p release
+          cp build/SobrJumper.apk release/SobrJumper.apk
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add release/SobrJumper.apk
+          git commit -m "Add built APK" || echo "APK already committed"
+          git push
+
+      - name: Upload APK artifact too
         uses: actions/upload-artifact@v4
         with:
           name: SobrJumper-APK
-          path: build/SobrJumper.apk
+          path: release/SobrJumper.apk
           if-no-files-found: error
-          
