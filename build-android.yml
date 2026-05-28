@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -21,6 +22,11 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Install required Android packages
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       - name: Install Godot 4.2.2 and export templates
         run: |
