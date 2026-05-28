@@ -1,10 +1,9 @@
-
 name: Build Android APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, основной ]
 
 jobs:
   build-apk:
@@ -23,12 +22,14 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install required Android packages
+      - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-33"
+          sdkmanager "build-tools;33.0.2"
 
-      - name: Install Godot 4.2.2 and export templates
+      - name: Download Godot and export templates
         run: |
           set -e
           GODOT_VERSION="4.2.2"
@@ -42,18 +43,75 @@ jobs:
 
           wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz" -O templates.tpz
           unzip -q templates.tpz
+
           mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_FOLDER}"
           cp -r templates/* "$HOME/.local/share/godot/export_templates/${GODOT_FOLDER}/"
 
-      - name: Configure Android export settings
+      - name: Force clean Android export preset
         run: |
-          set -e
-          mkdir -p "$HOME/.config/godot"
-          mkdir -p "$HOME/.android"
           mkdir -p build
 
+          cat > export_presets.cfg <<'EOF'
+          [preset.0]
+
+          name="Android"
+          platform="Android"
+          runnable=true
+          advanced_options=false
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/SobrJumper.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
+          script_export_mode=2
+
+          [preset.0.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          gradle_build/export_format=0
+          architectures/armeabi-v7a=false
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          version/code=1
+          version/name="1.0"
+          package/unique_name="com.sobr.sobrjumper"
+          package/name="Sobr Jumper"
+          package/signed=true
+          package/app_category=2
+          launcher_icons/main_192x192=""
+          launcher_icons/adaptive_foreground_432x432=""
+          launcher_icons/adaptive_background_432x432=""
+          graphics/opengl_debug=false
+          xr_features/xr_mode=0
+          screen/immersive_mode=true
+          screen/support_small=true
+          screen/support_normal=true
+          screen/support_large=true
+          screen/support_xlarge=true
+          user_data_backup/allow=false
+          command_line/extra_args=""
+          apk_expansion/enable=false
+          permissions/custom_permissions=PackedStringArray()
+          permissions/access_network_state=false
+          permissions/internet=false
+          permissions/vibrate=false
+          EOF
+
+      - name: Configure Godot Android settings
+        run: |
+          mkdir -p "$HOME/.config/godot"
+          mkdir -p "$HOME/.android"
+
           JAVA_PATH=$(dirname $(dirname $(readlink -f $(which javac))))
-          SDK_PATH=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}
+          SDK_PATH="${ANDROID_HOME}"
 
           keytool -genkeypair \
             -keystore "$HOME/.android/debug.keystore" \
@@ -65,7 +123,7 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US" || true
 
-          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOFSETTINGS
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
 
           [resource]
@@ -74,9 +132,9 @@ jobs:
           export/android/debug_keystore = "$HOME/.android/debug.keystore"
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
-          EOFSETTINGS
+          EOF
 
-      - name: Build debug APK
+      - name: Build APK
         run: |
           godot --headless --verbose --export-debug "Android" build/SobrJumper.apk
 
