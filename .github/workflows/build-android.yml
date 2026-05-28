@@ -1,160 +1,71 @@
-name: FINAL BUILD APK
+name: APK
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
-      - основной
-
-permissions:
-  contents: write
+    branches: [ main ]
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK packages
+      - name: Install Android tools
         run: |
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      - name: Download Godot
+      - name: Install Godot
         run: |
-          wget -q "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip" -O godot.zip
+          wget -q https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip -O godot.zip
           unzip -q godot.zip
           chmod +x Godot_v4.2.2-stable_linux.x86_64
           sudo mv Godot_v4.2.2-stable_linux.x86_64 /usr/local/bin/godot
-
-      - name: Download Godot Android templates
-        run: |
-          wget -q "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_export_templates.tpz" -O templates.tpz
+          wget -q https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_export_templates.tpz -O templates.tpz
           unzip -q templates.tpz
-          mkdir -p "$HOME/.local/share/godot/export_templates/4.2.2.stable"
-          cp -r templates/* "$HOME/.local/share/godot/export_templates/4.2.2.stable/"
+          mkdir -p ~/.local/share/godot/export_templates/4.2.2.stable
+          cp -r templates/* ~/.local/share/godot/export_templates/4.2.2.stable/
 
-      - name: Create Android export preset
+      - name: Configure Android
         run: |
-          mkdir -p build
-          cat > export_presets.cfg <<'EOF'
-[preset.0]
-
-name="Android"
-platform="Android"
-runnable=true
-advanced_options=false
-dedicated_server=false
-custom_features=""
-export_filter="all_resources"
-include_filter=""
-exclude_filter=""
-export_path="build/SobrJumper.apk"
-encryption_include_filters=""
-encryption_exclude_filters=""
-encrypt_pck=false
-encrypt_directory=false
-script_export_mode=2
-
-[preset.0.options]
-
-custom_template/debug=""
-custom_template/release=""
-gradle_build/use_gradle_build=false
-gradle_build/export_format=0
-architectures/armeabi-v7a=false
-architectures/arm64-v8a=true
-architectures/x86=false
-architectures/x86_64=false
-version/code=1
-version/name="1.0"
-package/unique_name="com.sobr.sobrjumper"
-package/name="Sobr Jumper"
-package/signed=true
-package/app_category=2
-launcher_icons/main_192x192=""
-launcher_icons/adaptive_foreground_432x432=""
-launcher_icons/adaptive_background_432x432=""
-graphics/opengl_debug=false
-xr_features/xr_mode=0
-screen/immersive_mode=true
-screen/support_small=true
-screen/support_normal=true
-screen/support_large=true
-screen/support_xlarge=true
-user_data_backup/allow=false
-command_line/extra_args=""
-apk_expansion/enable=false
-permissions/custom_permissions=PackedStringArray()
-permissions/access_network_state=false
-permissions/internet=false
-permissions/vibrate=false
-EOF
-
-      - name: Configure Godot Android
-        run: |
-          mkdir -p "$HOME/.config/godot"
-          mkdir -p "$HOME/.android"
-
+          mkdir -p ~/.config/godot ~/.android build release
+          keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
           JAVA_PATH=$(dirname $(dirname $(readlink -f $(which javac))))
-          SDK_PATH="${ANDROID_HOME}"
-
-          keytool -genkeypair \
-            -keystore "$HOME/.android/debug.keystore" \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US" || true
-
-          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
-[gd_resource type="EditorSettings" format=3]
-
-[resource]
-export/android/android_sdk_path = "$SDK_PATH"
-export/android/java_sdk_path = "$JAVA_PATH"
-export/android/debug_keystore = "$HOME/.android/debug.keystore"
-export/android/debug_keystore_user = "androiddebugkey"
-export/android/debug_keystore_pass = "android"
-EOF
+          cat > ~/.config/godot/editor_settings-4.tres <<EOF
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_PATH"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
 
       - name: Build APK
         run: |
-          mkdir -p build
           godot --headless --export-debug "Android" build/SobrJumper.apk
-          test -f build/SobrJumper.apk
-          ls -lah build/SobrJumper.apk
-
-      - name: Save APK into repository
-        run: |
-          mkdir -p release
           cp build/SobrJumper.apk release/SobrJumper.apk
 
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
+      - name: Save APK
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
           git add release/SobrJumper.apk
-          git commit -m "Add built APK" || echo "APK already committed"
+          git commit -m "APK" || true
           git push
 
-      - name: Upload APK artifact too
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: SobrJumper-APK
           path: release/SobrJumper.apk
-          if-no-files-found: error
