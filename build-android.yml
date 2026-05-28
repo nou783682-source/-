@@ -1,4 +1,4 @@
-name: Build Android APK
+name: FINAL BUILD APK
 
 on:
   workflow_dispatch:
@@ -32,6 +32,7 @@ jobs:
       - name: Download Godot and export templates
         run: |
           set -e
+
           GODOT_VERSION="4.2.2"
           GODOT_STATUS="stable"
           GODOT_FOLDER="${GODOT_VERSION}.${GODOT_STATUS}"
@@ -88,58 +89,4 @@ jobs:
           package/app_category=2
           launcher_icons/main_192x192=""
           launcher_icons/adaptive_foreground_432x432=""
-          launcher_icons/adaptive_background_432x432=""
-          graphics/opengl_debug=false
-          xr_features/xr_mode=0
-          screen/immersive_mode=true
-          screen/support_small=true
-          screen/support_normal=true
-          screen/support_large=true
-          screen/support_xlarge=true
-          user_data_backup/allow=false
-          command_line/extra_args=""
-          apk_expansion/enable=false
-          permissions/custom_permissions=PackedStringArray()
-          permissions/access_network_state=false
-          permissions/internet=false
-          permissions/vibrate=false
-          EOF
-
-      - name: Configure Godot Android settings
-        run: |
-          mkdir -p "$HOME/.config/godot"
-          mkdir -p "$HOME/.android"
-
-          JAVA_PATH=$(dirname $(dirname $(readlink -f $(which javac))))
-          SDK_PATH="${ANDROID_HOME}"
-
-          keytool -genkeypair \
-            -keystore "$HOME/.android/debug.keystore" \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US" || true
-
-          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
-          [gd_resource type="EditorSettings" format=3]
-
-          [resource]
-          export/android/android_sdk_path = "$SDK_PATH"
-          export/android/java_sdk_path = "$JAVA_PATH"
-          export/android/debug_keystore = "$HOME/.android/debug.keystore"
-          export/android/debug_keystore_user = "androiddebugkey"
-          export/android/debug_keystore_pass = "android"
-          EOF
-
-      - name: Build APK
-        run: |
-          godot --headless --verbose --export-debug "Android" build/SobrJumper.apk
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: SobrJumper-APK
-          path: build/SobrJumper.apk
+          launcher_icons/ad
