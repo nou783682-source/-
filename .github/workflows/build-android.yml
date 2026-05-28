@@ -41,9 +41,25 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates/4.2.2.stable"
           cp -r templates/* "$HOME/.local/share/godot/export_templates/4.2.2.stable/"
 
+      - name: Configure signing
+        run: |
+          mkdir -p "$HOME/.android" "$HOME/.config/godot" build release
+          keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+          JAVA_PATH=$(dirname $(dirname $(readlink -f $(which javac))))
+
+          printf '%s\n' \
+            '[gd_resource type="EditorSettings" format=3]' \
+            '' \
+            '[resource]' \
+            "export/android/android_sdk_path = \"$ANDROID_HOME\"" \
+            "export/android/java_sdk_path = \"$JAVA_PATH\"" \
+            "export/android/debug_keystore = \"$HOME/.android/debug.keystore\"" \
+            'export/android/debug_keystore_user = "androiddebugkey"' \
+            'export/android/debug_keystore_pass = "android"' \
+            > "$HOME/.config/godot/editor_settings-4.tres"
+
       - name: Create export preset
         run: |
-          mkdir -p build release
           printf '%s\n' \
             '[preset.0]' \
             '' \
@@ -73,6 +89,12 @@ jobs:
             'architectures/arm64-v8a=true' \
             'architectures/x86=false' \
             'architectures/x86_64=false' \
+            'keystore/debug="/home/runner/.android/debug.keystore"' \
+            'keystore/debug_user="androiddebugkey"' \
+            'keystore/debug_password="android"' \
+            'keystore/release=""' \
+            'keystore/release_user=""' \
+            'keystore/release_password=""' \
             'version/code=1' \
             'version/name="1.0"' \
             'package/unique_name="com.sobr.sobrjumper"' \
@@ -98,22 +120,14 @@ jobs:
             'permissions/vibrate=false' \
             > export_presets.cfg
 
-      - name: Configure Godot Android
+      - name: Force compatible renderer
         run: |
-          mkdir -p "$HOME/.config/godot"
-          mkdir -p "$HOME/.android"
-          keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
-          JAVA_PATH=$(dirname $(dirname $(readlink -f $(which javac))))
           printf '%s\n' \
-            '[gd_resource type="EditorSettings" format=3]' \
             '' \
-            '[resource]' \
-            "export/android/android_sdk_path = \"$ANDROID_HOME\"" \
-            "export/android/java_sdk_path = \"$JAVA_PATH\"" \
-            "export/android/debug_keystore = \"$HOME/.android/debug.keystore\"" \
-            'export/android/debug_keystore_user = "androiddebugkey"' \
-            'export/android/debug_keystore_pass = "android"' \
-            > "$HOME/.config/godot/editor_settings-4.tres"
+            '[rendering]' \
+            'renderer/rendering_method="gl_compatibility"' \
+            'renderer/rendering_method.mobile="gl_compatibility"' \
+            >> project.godot
 
       - name: Import project
         run: |
