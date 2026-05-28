@@ -10,13 +10,48 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.2.2
+
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
 
+      - name: Prepare Android export
+        run: |
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          mkdir -p "$HOME/.config/godot"
+          mkdir -p "$HOME/.android"
+          mkdir -p build
+
+          if [ -d "/root/.local/share/godot/export_templates/4.2.2.stable" ]; then
+            cp -r "/root/.local/share/godot/export_templates/4.2.2.stable" "$HOME/.local/share/godot/export_templates/"
+          fi
+
+          JAVA_PATH=$(dirname $(dirname $(readlink -f $(which javac))))
+          SDK_PATH=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/android-sdk}}
+
+          keytool -genkeypair \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" || true
+
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$SDK_PATH"
+          export/android/java_sdk_path = "$JAVA_PATH"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+
       - name: Build debug APK
         run: |
-          mkdir -p build
           godot --headless --verbose --export-debug "Android" build/SobrJumper.apk
 
       - name: Upload APK
