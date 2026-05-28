@@ -1,0 +1,26 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.2.2
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Build debug APK
+        run: |
+          mkdir -p build
+          godot --headless --verbose --export-debug "Android" build/SobrJumper.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SobrJumper-APK
+          path: build/SobrJumper.apk

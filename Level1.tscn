@@ -1,0 +1,138 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/Player.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/Coin.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/Enemy.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/Finish.tscn" id="4"]
+[ext_resource type="Script" path="res://scripts/game_ui.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/level1.gd" id="6"]
+
+[sub_resource type="RectangleShape2D" id="ground_shape"]
+size = Vector2(2000, 80)
+[sub_resource type="RectangleShape2D" id="platform_shape"]
+size = Vector2(260, 42)
+[sub_resource type="RectangleShape2D" id="small_platform_shape"]
+size = Vector2(170, 42)
+
+[node name="Level1" type="Node2D"]
+script = ExtResource("6")
+
+[node name="Sky" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="Background" type="ColorRect" parent="Sky"]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.12, 0.55, 0.85, 1)
+
+[node name="Ground" type="StaticBody2D" parent="."]
+position = Vector2(720, 620)
+
+[node name="GroundVisual" type="Polygon2D" parent="Ground"]
+color = Color(0.19, 0.62, 0.18, 1)
+polygon = PackedVector2Array(-1000, -40, 1000, -40, 1000, 40, -1000, 40)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
+shape = SubResource("ground_shape")
+
+[node name="Platform1" type="StaticBody2D" parent="."]
+position = Vector2(470, 470)
+
+[node name="Visual" type="Polygon2D" parent="Platform1"]
+color = Color(0.55, 0.33, 0.16, 1)
+polygon = PackedVector2Array(-130, -21, 130, -21, 130, 21, -130, 21)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform1"]
+shape = SubResource("platform_shape")
+
+[node name="Platform2" type="StaticBody2D" parent="."]
+position = Vector2(820, 360)
+
+[node name="Visual" type="Polygon2D" parent="Platform2"]
+color = Color(0.55, 0.33, 0.16, 1)
+polygon = PackedVector2Array(-85, -21, 85, -21, 85, 21, -85, 21)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform2"]
+shape = SubResource("small_platform_shape")
+
+[node name="Platform3" type="StaticBody2D" parent="."]
+position = Vector2(1180, 470)
+
+[node name="Visual" type="Polygon2D" parent="Platform3"]
+color = Color(0.55, 0.33, 0.16, 1)
+polygon = PackedVector2Array(-130, -21, 130, -21, 130, 21, -130, 21)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform3"]
+shape = SubResource("platform_shape")
+
+[node name="Player" parent="." instance=ExtResource("1")]
+position = Vector2(100, 545)
+
+[node name="Coin1" parent="." instance=ExtResource("2")]
+position = Vector2(380, 420)
+
+[node name="Coin2" parent="." instance=ExtResource("2")]
+position = Vector2(470, 420)
+
+[node name="Coin3" parent="." instance=ExtResource("2")]
+position = Vector2(560, 420)
+
+[node name="Coin4" parent="." instance=ExtResource("2")]
+position = Vector2(820, 310)
+
+[node name="Coin5" parent="." instance=ExtResource("2")]
+position = Vector2(1100, 420)
+
+[node name="Coin6" parent="." instance=ExtResource("2")]
+position = Vector2(1190, 420)
+
+[node name="Enemy" parent="." instance=ExtResource("3")]
+position = Vector2(680, 575)
+
+[node name="Enemy2" parent="." instance=ExtResource("3")]
+position = Vector2(1240, 575)
+
+[node name="Finish" parent="." instance=ExtResource("4")]
+position = Vector2(1580, 520)
+
+[node name="UI" type="CanvasLayer" parent="."]
+script = ExtResource("5")
+
+[node name="StatsLabel" type="Label" parent="UI"]
+offset_left = 24.0
+offset_top = 18.0
+offset_right = 420.0
+offset_bottom = 60.0
+text = "Жизни: 3   Монеты: 0"
+
+[node name="LeftButton" type="TouchScreenButton" parent="UI"]
+position = Vector2(60, 560)
+scale = Vector2(2, 2)
+action = "move_left"
+visibility_mode = 1
+
+[node name="LeftVisual" type="Polygon2D" parent="UI/LeftButton"]
+color = Color(1, 1, 1, 0.35)
+polygon = PackedVector2Array(-35, 0, 25, -35, 25, 35)
+
+[node name="RightButton" type="TouchScreenButton" parent="UI"]
+position = Vector2(190, 560)
+scale = Vector2(2, 2)
+action = "move_right"
+visibility_mode = 1
+
+[node name="RightVisual" type="Polygon2D" parent="UI/RightButton"]
+color = Color(1, 1, 1, 0.35)
+polygon = PackedVector2Array(35, 0, -25, -35, -25, 35)
+
+[node name="JumpButton" type="TouchScreenButton" parent="UI"]
+position = Vector2(1110, 540)
+scale = Vector2(2, 2)
+action = "jump"
+visibility_mode = 1
+
+[node name="JumpVisual" type="Polygon2D" parent="UI/JumpButton"]
+color = Color(1, 1, 1, 0.35)
+polygon = PackedVector2Array(0, -40, 38, 30, -38, 30)
+
+[editable path="Player"]
